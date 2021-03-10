@@ -1,5 +1,7 @@
 package com.techcarrot.stt;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,6 +32,11 @@ import com.google.cloud.speech.v1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
 import com.techcarrot.domain.Message;
+
+import ws.schild.jave.AudioAttributes;
+import ws.schild.jave.Encoder;
+import ws.schild.jave.EncodingAttributes;
+import ws.schild.jave.MultimediaObject;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
@@ -94,22 +101,49 @@ public class SpeechToTextController {
 
 	@ResponseBody
 	@PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Message> searchByAudio(@RequestBody MultipartFile file) throws Exception {
+	public ResponseEntity<Message> searchByAudio(@RequestBody MultipartFile sourceFile) throws Exception {
 
 		System.out.print("Inside Search");
-		System.out.print("Got the file here:" + file);
+		System.out.print("Got the file here:" + sourceFile);
+		
+		//Conversion to flac from webm format
+		File targetFile = new File("output.flac");
+		FileOutputStream fileOutputStream = new FileOutputStream(targetFile);
+		byte[] bytes = sourceFile.getInputStream().readAllBytes();
+		fileOutputStream.write(bytes);
+		fileOutputStream.flush();
+		fileOutputStream.close();
+		
+		AudioAttributes audioAttr = new AudioAttributes();
+		audioAttr.setCodec("flac");
+		audioAttr.setBitRate(64000);
+		audioAttr.setChannels(2);
+		audioAttr.setSamplingRate(44100);
+		
+		EncodingAttributes attrs = new EncodingAttributes();
+		attrs.setFormat("flac");
+		attrs.setAudioAttributes(audioAttr);
+		
+		try {
+			  Encoder encoder = new Encoder();  
+			  encoder.encode((MultimediaObject) sourceFile, targetFile, attrs);
+			} catch (Exception e) {  
+			   /*Handle here the video failure*/   
+			   e.printStackTrace();
+			}
+		
 
 		// Instantiates a client with GOOGLE_APPLICATION_CREDENTIALS
 		try (SpeechClient speech = SpeechClient.create()) {
 
 			// Setting audio configurations
-			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.LINEAR16)
+			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.FLAC)
 					.setSampleRateHertz(16000).setLanguageCode("en-US").setEnableAutomaticPunctuation(true)
 					.setEnableWordTimeOffsets(true).setModel("default").build();
 
 			// Local audio file Set
 			// Path path = Paths.get("C:\\Users\\sayan\\Documents\\audio-file.flac");
-			byte[] data = file.getBytes();
+			byte[] data =  Files.readAllBytes(targetFile.toPath());
 			ByteString audioBytes = ByteString.copyFrom(data);
 			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
 
