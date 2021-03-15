@@ -13,9 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,10 +31,10 @@ import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
 import com.techcarrot.domain.Message;
 
-import ws.schild.jave.AudioAttributes;
 import ws.schild.jave.Encoder;
-import ws.schild.jave.EncodingAttributes;
 import ws.schild.jave.MultimediaObject;
+import ws.schild.jave.encode.AudioAttributes;
+import ws.schild.jave.encode.EncodingAttributes;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
@@ -101,49 +99,52 @@ public class SpeechToTextController {
 
 	@ResponseBody
 	@PostMapping(value = "/search", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Message> searchByAudio(@RequestBody MultipartFile sourceFile) throws Exception {
+	public ResponseEntity<Message> searchByAudio(@RequestPart("sourceFile") MultipartFile sourceFile) throws Exception {
 
 		System.out.print("Inside Search");
-		System.out.print("Got the file here:" + sourceFile);
-		
-		//Conversion to flac from webm format
-		File targetFile = new File("output.flac");
-		FileOutputStream fileOutputStream = new FileOutputStream(targetFile);
+
+		File finalSourceFile = new File("C:\\Users\\sayan\\Documents\\input.webm");
+		File targetFile = new File("C:\\Users\\sayan\\Documents\\output.flac");
+
+		// Conversion to file from multipart file
+		FileOutputStream fileOutputStream = new FileOutputStream(finalSourceFile);
 		byte[] bytes = sourceFile.getInputStream().readAllBytes();
 		fileOutputStream.write(bytes);
 		fileOutputStream.flush();
 		fileOutputStream.close();
-		
+
+		// Conversion to flac from webm format
 		AudioAttributes audioAttr = new AudioAttributes();
 		audioAttr.setCodec("flac");
 		audioAttr.setBitRate(64000);
 		audioAttr.setChannels(2);
-		audioAttr.setSamplingRate(44100);
-		
+
 		EncodingAttributes attrs = new EncodingAttributes();
-		attrs.setFormat("flac");
+		attrs.setInputFormat("webm");
+		attrs.setOutputFormat("flac");
 		attrs.setAudioAttributes(audioAttr);
-		
+
+		// convert multipart sourceFile to File
+		// File finalSourceFile = multipartToFile(sourceFile, "input.webm");
+
 		try {
-			  Encoder encoder = new Encoder();  
-			  encoder.encode((MultimediaObject) sourceFile, targetFile, attrs);
-			} catch (Exception e) {  
-			   /*Handle here the video failure*/   
-			   e.printStackTrace();
-			}
-		
+			Encoder encoder = new Encoder();
+			encoder.encode(new MultimediaObject(finalSourceFile), targetFile, attrs);
+		} catch (Exception e) {
+			/* Handle here the video failure */
+			e.printStackTrace();
+		}
 
 		// Instantiates a client with GOOGLE_APPLICATION_CREDENTIALS
 		try (SpeechClient speech = SpeechClient.create()) {
 
 			// Setting audio configurations
 			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.FLAC)
-					.setSampleRateHertz(16000).setLanguageCode("en-US").setEnableAutomaticPunctuation(true)
-					.setEnableWordTimeOffsets(true).setModel("default").build();
+					.setLanguageCode("en-US").setEnableAutomaticPunctuation(true).setEnableWordTimeOffsets(true)
+					.setModel("default").setAudioChannelCount(2).build();
 
-			// Local audio file Set
-			// Path path = Paths.get("C:\\Users\\sayan\\Documents\\audio-file.flac");
-			byte[] data =  Files.readAllBytes(targetFile.toPath());
+			// set audio file uploaded from UI
+			byte[] data = Files.readAllBytes(targetFile.toPath());
 			ByteString audioBytes = ByteString.copyFrom(data);
 			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(audioBytes).build();
 
