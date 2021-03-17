@@ -103,8 +103,12 @@ public class SpeechToTextController {
 
 		System.out.print("Inside Search");
 
-		File finalSourceFile = new File("C:\\Users\\sayan\\Documents\\input.webm");
-		File targetFile = new File("C:\\Users\\sayan\\Documents\\output.flac");
+		//File finalSourceFile = new File("C:\\Users\\sayan\\Documents\\input.webm");
+		//File targetFile = new File("C:\\Users\\sayan\\Documents\\output.flac");
+		
+		//Creating source and target file
+		File finalSourceFile = new File(System.getProperty("java.io.tmpdir")+"/"+"input.webm");
+		File targetFile = new File(System.getProperty("java.io.tmpdir")+"/"+ "output.flac");         
 
 		// Conversion to file from multipart file
 		FileOutputStream fileOutputStream = new FileOutputStream(finalSourceFile);
