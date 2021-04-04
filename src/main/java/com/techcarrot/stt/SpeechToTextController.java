@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -20,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.google.api.gax.longrunning.OperationFuture;
-import com.google.cloud.speech.v1.LongRunningRecognizeMetadata;
-import com.google.cloud.speech.v1.LongRunningRecognizeResponse;
-import com.google.cloud.speech.v1.RecognitionAudio;
-import com.google.cloud.speech.v1.RecognitionConfig;
-import com.google.cloud.speech.v1.RecognitionConfig.AudioEncoding;
-import com.google.cloud.speech.v1.SpeechClient;
-import com.google.cloud.speech.v1.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v1.SpeechRecognitionResult;
+import com.google.cloud.speech.v1p1beta1.LongRunningRecognizeMetadata;
+import com.google.cloud.speech.v1p1beta1.LongRunningRecognizeResponse;
+import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
+import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
+import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
+import com.google.cloud.speech.v1p1beta1.SpeechClient;
+import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
+import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
 import com.techcarrot.domain.Message;
 
@@ -59,7 +60,7 @@ public class SpeechToTextController {
 
 			// Setting audio configurations
 			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.FLAC)
-					.setLanguageCode("en-US").setEnableAutomaticPunctuation(true).setEnableWordTimeOffsets(true)
+					.setLanguageCode("en-US").setEnableWordTimeOffsets(true)
 					.setModel("default").build();
 
 			// Local audio file Set
@@ -141,11 +142,17 @@ public class SpeechToTextController {
 
 		// Instantiates a client with GOOGLE_APPLICATION_CREDENTIALS
 		try (SpeechClient speech = SpeechClient.create()) {
+			
+			ArrayList<String> languageList = new ArrayList<>();
+		    languageList.add("bn-IN");
+		    languageList.add("hi-IN");
+
 
 			// Setting audio configurations
 			RecognitionConfig config = RecognitionConfig.newBuilder().setEncoding(AudioEncoding.FLAC)
-					.setLanguageCode("en-US").setEnableAutomaticPunctuation(true).setEnableWordTimeOffsets(true)
-					.setModel("default").setAudioChannelCount(2).build();
+					.setLanguageCode("en-US").addAllAlternativeLanguageCodes(languageList)
+					.setEnableAutomaticPunctuation(true).setEnableWordTimeOffsets(true).setModel("command_and_search")
+					.setAudioChannelCount(2).build();
 
 			// set audio file uploaded from UI
 			byte[] data = Files.readAllBytes(targetFile.toPath());
